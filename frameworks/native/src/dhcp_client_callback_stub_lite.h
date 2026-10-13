@@ -15,6 +15,8 @@
 #ifndef OHOS_DHCP_CLIENT_CALLBACK_STUB_LITE_H
 #define OHOS_DHCP_CLIENT_CALLBACK_STUB_LITE_H
 
+#include <mutex>
+
 #include "serializer.h"
 #include "i_dhcp_client_callback.h"
 
@@ -37,6 +39,7 @@ private:
     int RemoteOnIpFailChanged(uint32_t code, IpcIo *data);
 
     std::shared_ptr<IDhcpClientCallBack> callback_;
+    std::mutex callbackMutex_;
     bool mRemoteDied;
 };
 }  // namespace DHCP
