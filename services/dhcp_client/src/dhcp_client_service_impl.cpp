@@ -283,7 +283,7 @@ ErrCode DhcpClientServiceImpl::StartDhcpClient(const RouterConfig &config)
 ErrCode DhcpClientServiceImpl::DealWifiDhcpCache(int32_t cmd, const IpCacheInfo &ipCacheInfo)
 {
     DHCP_LOGI("DealWifiDhcpCache enter");
-    if (!DhcpPermissionUtils::VerifyIsNativeProcess()) {
+    if (!DhcpPermissionUtils::VerifyIsNativeProcess() && cmd != WIFI_DHCP_CACHE_NETWORK_REMOVED) {
         DHCP_LOGE("DealWifiDhcpCache:NOT NATIVE PROCESS, PERMISSION_DENIED!");
         return DHCP_E_PERMISSION_DENIED;
     }
@@ -300,6 +300,8 @@ ErrCode DhcpClientServiceImpl::DealWifiDhcpCache(int32_t cmd, const IpCacheInfo 
         func = [cacheInfo]() { DhcpResultStoreManager::GetInstance().AddCachedIp(cacheInfo); };
     } else if (cmd == WIFI_DHCP_CACHE_REMOVE) {
         func = [cacheInfo]() { DhcpResultStoreManager::GetInstance().RemoveCachedIp(cacheInfo); };
+    } else if (cmd == WIFI_DHCP_CACHE_NETWORK_REMOVED) {
+        func = [cacheInfo]() { DhcpResultStoreManager::GetInstance().SetNetworkRemoveState(cacheInfo); };
     } else {
         return DHCP_E_FAILED;
     }
@@ -311,6 +313,8 @@ ErrCode DhcpClientServiceImpl::DealWifiDhcpCache(int32_t cmd, const IpCacheInfo 
         DhcpResultStoreManager::GetInstance().AddCachedIp(cacheInfo);
     } else if (cmd == WIFI_DHCP_CACHE_REMOVE) {
         DhcpResultStoreManager::GetInstance().RemoveCachedIp(cacheInfo);
+    } else if (cmd == WIFI_DHCP_CACHE_NETWORK_REMOVED) {
+        DhcpResultStoreManager::GetInstance().SetNetworkRemoveState(cacheInfo);
     }
     return DHCP_E_SUCCESS;
 #endif

@@ -16,9 +16,13 @@
 #define OHOS_DHCP_RESULT_STORE_MANAGER_H
 
 #include <string>
-#include <mutex>
 #include <unistd.h>
 #include "dhcp_client_def.h"
+#ifdef DHCP_FFRT_ENABLE
+#include "ffrt_inner.h"
+#else
+#include <mutex>
+#endif
 
 namespace OHOS {
 namespace DHCP {
@@ -31,6 +35,7 @@ public:
     int32_t GetCachedIp(const std::string targetBssid, IpInfoCached &outIpResult);
     int32_t RemoveCachedIp(const IpInfoCached &cacheInfo);
     int32_t AddCachedIp(const IpInfoCached &cacheInfo);
+    int32_t SetNetworkRemoveState(const IpInfoCached &cacheInfo);
 
 private:
     void SetConfigFilePath(const std::string &fileName);
@@ -38,7 +43,11 @@ private:
     int32_t SaveConfig();
     
 private:
-    std::mutex m_ipResultMutex;
+#ifdef DHCP_FFRT_ENABLE
+    ffrt::mutex ipResultMutex_;
+#else
+    std::mutex ipResultMutex_;
+#endif
     std::vector<IpInfoCached> m_allIpCached;
     std::string m_fileName;
 };

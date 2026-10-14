@@ -698,6 +698,10 @@ void DhcpClientStateMachine::Reboot(time_t timestamp)
         DHCP_LOGE("not find cache ip for m_routerCfg.bssid");
         return;
     }
+    if (!ipInfoCached.isNetworkConfigExit) {
+        DHCP_LOGI("fastRequestIp is disabled, start from discover");
+        return;
+    }
     if (static_cast<int64_t>(timestamp) > ipInfoCached.absoluteLeasetime) {
         DHCP_LOGE("Lease has expired, need get new ip");
         return;

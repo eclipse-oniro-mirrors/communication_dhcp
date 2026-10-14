@@ -38,6 +38,7 @@ extern "C" {
 #define SSID_MAX_LEN 32
 #define WIFI_DHCP_CACHE_ADD 1
 #define WIFI_DHCP_CACHE_REMOVE 2
+#define WIFI_DHCP_CACHE_NETWORK_REMOVED 3
 
 typedef struct{
     uint32_t dnsNumber;

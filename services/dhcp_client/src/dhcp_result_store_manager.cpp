@@ -21,6 +21,12 @@
 #include <algorithm>
 #include <ctime>
 
+#ifdef DHCP_FFRT_ENABLE
+#define IP_RESULT_MUTEX_LOCK std::unique_lock<ffrt::mutex> lock(ipResultMutex_)
+#else
+#define IP_RESULT_MUTEX_LOCK std::unique_lock<std::mutex> lock(ipResultMutex_)
+#endif
+
 namespace OHOS {
 namespace DHCP {
 DEFINE_DHCPLOG_DHCP_LABEL("DhcpResultStoreManager");
@@ -58,46 +64,50 @@ static void TrimString(std::string &str)
 static int32_t SetClassKeyValue(IpInfoCached &item, const std::string &key, const std::string &value)
 {
     int32_t errorKeyValue = 0;
-    std::string valueTmp = value;
+
+    struct CharField {
+        const char *key;
+        char *dest;
+        size_t size;
+    };
+    CharField charFields[] = {
+        {"strYiaddr", item.ipResult.strYiaddr, sizeof(item.ipResult.strYiaddr)},
+        {"strOptServerId", item.ipResult.strOptServerId, sizeof(item.ipResult.strOptServerId)},
+        {"strOptSubnet", item.ipResult.strOptSubnet, sizeof(item.ipResult.strOptSubnet)},
+        {"strOptDns1", item.ipResult.strOptDns1, sizeof(item.ipResult.strOptDns1)},
+        {"strOptDns2", item.ipResult.strOptDns2, sizeof(item.ipResult.strOptDns2)},
+        {"strOptRouter1", item.ipResult.strOptRouter1, sizeof(item.ipResult.strOptRouter1)},
+        {"strOptRouter2", item.ipResult.strOptRouter2, sizeof(item.ipResult.strOptRouter2)},
+    };
+    for (const auto &f : charFields) {
+        if (key == f.key) {
+            if (strcpy_s(f.dest, f.size, value.c_str()) != EOK) {
+                errorKeyValue++;
+            }
+            return errorKeyValue;
+        }
+    }
     if (key == "bssid") {
         item.bssid = value;
-    } else if (key == "ssid") {
-        item.ssid = value;
-    } else if (key == "absoluteLeasetime") {
-        item.absoluteLeasetime = static_cast<int64_t>(CheckDataLegal(valueTmp));
-    } else if (key == "strYiaddr") {
-        if (strcpy_s(item.ipResult.strYiaddr, sizeof(item.ipResult.strYiaddr), value.c_str()) != EOK) {
-            errorKeyValue++;
-        }
-    } else if (key == "strOptServerId") {
-        if (strcpy_s(item.ipResult.strOptServerId, sizeof(item.ipResult.strOptServerId), value.c_str()) != EOK) {
-            errorKeyValue++;
-        }
-    } else if (key == "strOptSubnet") {
-        if (strcpy_s(item.ipResult.strOptSubnet, sizeof(item.ipResult.strOptSubnet), value.c_str()) != EOK) {
-            errorKeyValue++;
-        }
-    } else if (key == "strOptDns1") {
-        if (strcpy_s(item.ipResult.strOptDns1, sizeof(item.ipResult.strOptDns1), value.c_str()) != EOK) {
-            errorKeyValue++;
-        }
-    } else if (key == "strOptDns2") {
-        if (strcpy_s(item.ipResult.strOptDns2, sizeof(item.ipResult.strOptDns2), value.c_str()) != EOK) {
-            errorKeyValue++;
-        }
-    } else if (key == "strOptRouter1") {
-        if (strcpy_s(item.ipResult.strOptRouter1, sizeof(item.ipResult.strOptRouter1), value.c_str()) != EOK) {
-            errorKeyValue++;
-        }
-    } else if (key == "strOptRouter2") {
-        if (strcpy_s(item.ipResult.strOptRouter2, sizeof(item.ipResult.strOptRouter2), value.c_str()) != EOK) {
-            errorKeyValue++;
-        }
-    } else if (key == "uOptLeasetime") {
-        item.ipResult.uOptLeasetime = static_cast<uint32_t>(CheckDataLegal(valueTmp));
-    } else {
-        errorKeyValue++;
+        return errorKeyValue;
     }
+    if (key == "ssid") {
+        item.ssid = value;
+        return errorKeyValue;
+    }
+    if (key == "absoluteLeasetime") {
+        item.absoluteLeasetime = static_cast<int64_t>(CheckDataLegal(value));
+        return errorKeyValue;
+    }
+    if (key == "uOptLeasetime") {
+        item.ipResult.uOptLeasetime = static_cast<uint32_t>(CheckDataLegal(value));
+        return errorKeyValue;
+    }
+    if (key == "isNetworkConfigExit") {
+        item.isNetworkConfigExit = (value == "1" || value == "true");
+        return errorKeyValue;
+    }
+    errorKeyValue++;
     return errorKeyValue;
 }
 
@@ -116,6 +126,7 @@ static std::string OutClassString(IpInfoCached &item)
     buffer += "    strOptRouter1=" + std::string(item.ipResult.strOptRouter1) + "\n";
     buffer += "    strOptRouter2=" + std::string(item.ipResult.strOptRouter2) + "\n";
     buffer += "    uOptLeasetime=" + std::to_string(item.ipResult.uOptLeasetime) + "\n";
+    buffer += "    isNetworkConfigExit=" + std::string(item.isNetworkConfigExit ? "1" : "0") + "\n";
     buffer += "    <IpInfoCached>\n";
     return buffer;
 }
@@ -124,6 +135,7 @@ static void ClearClass(IpInfoCached &item)
 {
     item.bssid.clear();
     item.absoluteLeasetime = 0;
+    item.isNetworkConfigExit = true;
     item.ipResult.uOptLeasetime = 0;
 }
 
@@ -208,7 +220,7 @@ static int32_t ReadNetwork(IpInfoCached &item, FILE *fp, char *line, size_t line
 
 int32_t DhcpResultStoreManager::SaveIpInfoInLocalFile(const IpInfoCached ipResult)
 {
-    std::unique_lock<std::mutex> lock(m_ipResultMutex);
+    IP_RESULT_MUTEX_LOCK;
     for (auto it = m_allIpCached.begin(); it != m_allIpCached.end(); it++) {
         if (ipResult.bssid == it->bssid) {
             m_allIpCached.erase(it);
@@ -227,7 +239,7 @@ int32_t DhcpResultStoreManager::RemoveCachedIp(const IpInfoCached &cacheInfo)
         DHCP_LOGE("RemoveCachedIp, ssid is empty");
         return DHCP_E_FAILED;
     }
-    std::unique_lock<std::mutex> lock(m_ipResultMutex);
+    IP_RESULT_MUTEX_LOCK;
     DHCP_LOGE("RemoveCachedIp, m_allIpCached size is %{public}d", static_cast<int32_t>(m_allIpCached.size()));
     if (m_allIpCached.empty()) {
         DHCP_LOGE("m_allIpCached is empty");
@@ -241,7 +253,7 @@ int32_t DhcpResultStoreManager::RemoveCachedIp(const IpInfoCached &cacheInfo)
 int32_t DhcpResultStoreManager::AddCachedIp(const IpInfoCached &cacheInfo)
 {
     LoadAllIpCached(DHCP_CACHE_FILE);
-    std::unique_lock<std::mutex> lock(m_ipResultMutex);
+    IP_RESULT_MUTEX_LOCK;
     DHCP_LOGE("AddCachedIp, m_allIpCached size is %{public}d", static_cast<int32_t>(m_allIpCached.size()));
     if (m_allIpCached.empty()) {
         DHCP_LOGE("m_allIpCached is empty");
@@ -260,11 +272,40 @@ int32_t DhcpResultStoreManager::AddCachedIp(const IpInfoCached &cacheInfo)
     return SaveConfig();
 }
 
+int32_t DhcpResultStoreManager::SetNetworkRemoveState(const IpInfoCached &cacheInfo)
+{
+    LoadAllIpCached(DHCP_CACHE_FILE);
+    if (cacheInfo.bssid.empty()) {
+        DHCP_LOGE("SetNetworkRemoveState, bssid is empty");
+        return DHCP_E_FAILED;
+    }
+    IP_RESULT_MUTEX_LOCK;
+    DHCP_LOGI("SetNetworkRemoveState, m_allIpCached size is %{public}d",
+        static_cast<int32_t>(m_allIpCached.size()));
+    if (m_allIpCached.empty()) {
+        DHCP_LOGE("SetNetworkRemoveState, m_allIpCached is empty");
+        return DHCP_E_FAILED;
+    }
+    bool found = false;
+    for (auto it = m_allIpCached.begin(); it != m_allIpCached.end(); it++) {
+        if (cacheInfo.bssid == it->bssid) {
+            it->isNetworkConfigExit = false;
+            found = true;
+            break;
+        }
+    }
+    if (!found) {
+        DHCP_LOGE("SetNetworkRemoveState, not find cache for bssid");
+        return DHCP_E_FAILED;
+    }
+    return SaveConfig();
+}
+
 int32_t DhcpResultStoreManager::GetCachedIp(const std::string targetBssid, IpInfoCached &outIpResult)
 {
     std::string fileName = DHCP_CACHE_FILE;
     LoadAllIpCached(fileName);
-    std::unique_lock<std::mutex> lock(m_ipResultMutex);
+    IP_RESULT_MUTEX_LOCK;
     for (auto it = m_allIpCached.begin(); it != m_allIpCached.end(); it++) {
         if (targetBssid == it->bssid) {
             outIpResult = static_cast<IpInfoCached>(*it);
@@ -281,7 +322,7 @@ void DhcpResultStoreManager::SetConfigFilePath(const std::string &fileName)
 
 int32_t DhcpResultStoreManager::LoadAllIpCached(const std::string &fileName)
 {
-    std::unique_lock<std::mutex> lock(m_ipResultMutex);
+    IP_RESULT_MUTEX_LOCK;
     SetConfigFilePath(fileName);
     if (m_fileName.empty()) {
         DHCP_LOGE("File name is empty.");
