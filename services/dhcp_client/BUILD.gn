@@ -47,6 +47,7 @@ if (defined(ohos_lite)) {
       "src/dhcp_client_stub_lite.cpp",
       "src/dhcp_function.cpp",
       "src/dhcp_ipv6_client.cpp",
+      "src/dhcp_ipv6_event.cpp",
       "src/dhcp_ipv6_dns_repository.cpp",
       "src/dhcp_ipv6_info.cpp",
       "src/dhcp_options.cpp",
@@ -81,6 +82,7 @@ if (defined(ohos_lite)) {
       "VENDOR_NAME_PREFIX=\"$VENDOR_NAME\"",
       "DEFAULT_IPV4_DNS_PRI=\"$IPV4_DNS_PRI\"",
       "DEFAULT_IPV4_DNS_SEC=\"$IPV4_DNS_SEC\"",
+      "__MUSL__",
     ]
 
     if (defined(global_parts_info) && defined(global_parts_info.startup_init)) {
