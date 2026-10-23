@@ -12,6 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include <sys/socket.h>
 #include <linux/if_link.h>
 #include <linux/rtnetlink.h>
 #include "dhcp_ipv6_client.h"
