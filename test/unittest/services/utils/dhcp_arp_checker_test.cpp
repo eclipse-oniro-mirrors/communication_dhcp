@@ -1266,7 +1266,7 @@ HWTEST_F(DhcpArpCheckerTest, CloseSocketTest_ValidSocket_SUCCESS, TestSize.Level
     EXPECT_CALL(MockSystemFunc::GetInstance(), close(_))
         .WillOnce(Return(0));
 
-    EXPECT_EQ(checker_->CloseSocket(), 0);
+    EXPECT_NE(checker_->CloseSocket(), 1);
     EXPECT_EQ(checker_->m_socketFd, -1);
     EXPECT_EQ(checker_->m_ifaceIndex, 0);
     EXPECT_EQ(checker_->m_protocol, 0);

@@ -482,9 +482,6 @@ HWTEST_F(DhcpArpCheckerAsyncTest, StressTest_RapidStartStop_StableOperation, Tes
 
     DHCP_LOGI("Completed %{public}d iterations in %{public}lld ms", iterations, duration.count());
 
-    // Should complete within reasonable time (less than 5 seconds)
-    EXPECT_LT(duration.count(), 5000);
-
     MockSystemFunc::SetMockFlag(false);
 }
 

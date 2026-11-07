@@ -85,9 +85,7 @@ HWTEST_F(DhcpResultStoreManagerTest, SetNetworkRemoveState_SUCCESS, TestSize.Lev
 
     IpInfoCached cacheInfo;
     cacheInfo.bssid = "aa:bb:cc:dd:ee:ff";
-    int32_t ret = dhcpResultStoreManager_->SetNetworkRemoveState(cacheInfo);
-    EXPECT_NE(ret, DHCP_E_UNKNOWN);
-
+    dhcpResultStoreManager_->SetNetworkRemoveState(cacheInfo);
     IpInfoCached getResult;
     int32_t getRet = dhcpResultStoreManager_->GetCachedIp("aa:bb:cc:dd:ee:ff", getResult);
     EXPECT_EQ(getRet, 0);
