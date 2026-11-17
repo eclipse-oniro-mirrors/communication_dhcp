@@ -7,9 +7,11 @@ Dynamic Host Configuration Protocol (DHCP) is a standard protocol defined by RFC
 
 2. DHCP server: used to manage all IP network information, and process the client's DHCP request, assigning IP address, subnet mask, default gateway and other content to the accessing client.
 
--   C APIs: C APIs of the DHCP client are provided to register callbacks and to start and stop the client, so that upper-layer modules can call them from C code.
+#### Main Capabilities
+
+-   C APIs: the DHCP client exposes C interfaces to register callbacks and to start and stop the client, so upper-layer modules written in C can use it directly.
 -   System service: the DHCP client is registered with SAMGR as a system service, so that other subsystems can obtain it by service name.
--   Automatic route and DNS configuration: after an IPv4 address is obtained, the default route is added and the DNS configuration is written automatically.
+-   Automatic route and DNS configuration: in lite builds \(`OHOS_ARCH_LITE`\), the default route is added and the DNS configuration is written automatically after an IPv4 address is obtained; on standard systems, routes and DNS are delivered by the network management subsystem.
 -   Synchronous task with timeout: a synchronous task API with a timeout is provided, which returns an error code on timeout.
 
 #### Software Architecture
